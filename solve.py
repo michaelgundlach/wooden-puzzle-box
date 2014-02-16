@@ -2,7 +2,6 @@ class Box(object):
     def __init__(self):
         self.x = 6
         self.y = 5
-        self._bits = self.x * self.y
 
 class Move(object):
     """
@@ -157,25 +156,32 @@ class AsciiShape(object):
     def __repr__(self):
         return '\n%s\n' % str(self)
 
-def solve():
-    box = Box()
-    pieces = [
-            Piece("plus", box, [' | ', '-|-', ' | ']),
-            Piece("u", box, ['---', '| |']),
-            Piece("i", box, ['-----']),
-            Piece("q", box, ['++', '++', ' |']),
-            Piece("r", box, [' | ', '-+-', '  |']),
-            Piece("L", box, ['|  ', '|  ', '+--']),
-            Piece("z", box, ['--+ ', '  +-']),
-            ]
+BOX = Box()
+PIECES = [
+        Piece("plus", BOX, [' | ', '-|-', ' | ']),
+        Piece("p", BOX, ['-+--', ' |  ']),
+        Piece("t", BOX, ['-+-', ' | ', ' | ']),
+        Piece("w", BOX, ['-+ ', ' ++', '  |']),
+        Piece("2", BOX, ['+  ', '+-+', '  |']),
+        Piece("r", BOX, ['+---', '|   ']),
+        Piece("u", BOX, ['---', '| |']),
+        Piece("i", BOX, ['-----']),
+        Piece("q", BOX, ['++', '++', ' |']),
+        Piece("f", BOX, [' | ', '-+-', '  |']),
+        Piece("L", BOX, ['|  ', '|  ', '+--']),
+        Piece("z", BOX, ['--+ ', '  +-']),
+        ]
 
+def solve():
     # Don't let us cheat with an optimal ordering
     import random
-    random.shuffle(pieces)
+    random.shuffle(PIECES)
 
-    initialBoard = Move(pieces[0], mask=0)
-    print solveRecursive(initialBoard, [], 6, pieces)
-    #solveWithFixedPieces(box, pieces)
+    initialBoard = Move(PIECES[0], mask=0)
+    soln = solveRecursive(initialBoard, [], 6, PIECES)
+    for move in (soln or []):
+        print str(move).strip()
+    #solveWithFixedPieces(box, PIECES[:6]) # random 6 pieces... good luck!
 
 def solveRecursive(board, moves, n, unused_pieces):
     """
