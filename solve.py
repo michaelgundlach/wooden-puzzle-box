@@ -1,7 +1,27 @@
+"""
+Finds the solution to a wooden 3d puzzle.
+
+The puzzle is a 6x5x2 unit wooden box, containing 12 wooden pieces, each made
+of 5 units of wood in 2d (e.g. all the 5-block tetris shapes).  The goal is
+to fit all 12 pieces into the box in two layers of 6 pieces each.
+
+The program finds a solution for one layer using 6 pieces, then hopes to
+find a solution using the remaining 6 pieces, in which case the puzzle is
+solved.
+
+The algorithm for finding a solution in one layer is recursive: it takes a
+partially-filled in layer, tries every way it can to place a single piece from
+the 'unplaced' pile into that layer, and recurses.  It wins when it has used 6
+pieces.
+"""
+
+
 class Box(object):
+    """Defines the width and height of the box."""
     def __init__(self):
         self.x = 6
         self.y = 5
+
 
 class Move(object):
     """
@@ -27,15 +47,19 @@ class Move(object):
         return int(number, 2)
 
     def fits(self, move2):
+        """Can this move and another move be made legally?"""
         return not (self.mask & move2.mask)
 
     def combined(self, move2):
+        """The result of making two moves -- a larger "move" that is the
+        combination of the two."""
         return Move(self.piece, mask=self.mask | move2.mask)
 
     def __str__(self):
-        return str(self.toAsciiShape(char='.'))
+        return str(self.toAsciiShape())
 
     def toAsciiShape(self, char='.'):
+        """Returns the ascii representation of the Move."""
         x, y = self.piece.box.x, self.piece.box.y
         art = []
         rowmask = int('1' * x, 2)
@@ -53,12 +77,16 @@ class Move(object):
     def __repr__(self):
         return str(self)
 
+    # Required so we can live in a set()
     def __hash__(self):
         return self.mask
     def __eq__(self, other):
         return hash(self) == hash(other)
 
+
 class Piece(object):
+    """Represents a wooden piece.  A Piece knows all of the possible ways
+    it can be laid in a Box (its 'moves')."""
     def __init__(self, name, box, shape):
         """
         box: Box
@@ -75,9 +103,14 @@ class Piece(object):
         Example input for a cross:
         [" | ", "-+-", " | ", " | "]
         Returns, for a 6x5 box:
-        [Move(mask=0b 000010 000111 000010 000010 000000),
-         # plus every other way that you could put the cross in the
-         # box, flipping or rotating or translating it
+        [Move([
+            '    | ',
+            '   -+-',
+            '    | ',
+            '    | ',
+            '      ']),
+         # plus every other way that you could put the cross in an empty
+         # box, flipping or rotating or sliding it
         ]
         """
         x, y = self.box.x, self.box.y
@@ -85,6 +118,7 @@ class Piece(object):
                 for rotation in AsciiShape(shape).rotations()
                 for flip in rotation.flips()
                 for translation in flip.translations(x, y)}
+
 
 class AsciiShape(object):
     """
@@ -115,6 +149,7 @@ class AsciiShape(object):
         return [self, AsciiShape(self._flipped(self.art))]
 
     def _flipped(self, art):
+        """Mirrors the art about the vertical axis."""
         return [''.join(reversed(word)) for word in art]
 
     def translations(self, x, y):
@@ -146,6 +181,7 @@ class AsciiShape(object):
         return xgrown + yrows
 
     def __str__(self):
+        """A pretty ascii printout of the shape."""
         width = len(self.art[0])
         border = "+%s+" % ('-' * width)
         result = ['\n', border]
@@ -156,10 +192,12 @@ class AsciiShape(object):
     def __repr__(self):
         return '\n%s\n' % str(self)
 
+
 BOX = Box()
 PIECES = [
         # The first 6 pieces and last 6 pieces each form a layer in
-        # a 6x5 box.
+        # a 6x5 box.  But we shuffle in solve() just to prove to ourselves
+        # that this works correctly.
         Piece("plus", BOX, [' | ', '-|-', ' | ']),
         Piece("L", BOX, ['|  ', '|  ', '+--']),
         Piece("u", BOX, ['---', '| |']),
@@ -174,30 +212,35 @@ PIECES = [
         Piece("i", BOX, ['-----']),
         ]
 
+
 def solve():
+    """Solves the puzzle.
+
+    Alg:
+    Call the 1st piece in PIECES the Gold piece.
+    Find a solution using Gold and 5 other pieces.
+    When you find it, check for a solution using the remaining 6 pieces.
+    If so, we win. if not, try another 5-piece-and-Gold combo.
+
+    This approach, as apposed to trying every 12-choose-6 combo and then
+    checking the other 6 pieces, prevents us from doing double work.  E.g.
+    if we checked piece 1-6 and found no solution, we would stupidly try
+    7-12 later anyway.  (An alternate approach: when we find no solution to
+    1-6, mark 7-12 as toast as well, and always check the toast tables before
+    starting a given combo.)
+    """
     # Don't let us cheat with an optimal ordering
     import random
     random.shuffle(PIECES)
 
+    # A pseudo-Move that is an empty board of the right dimensions.
     initialBoard = Move(PIECES[0], mask=0)
 
-    # Alg:
-    # Call the 1st piece in PIECES the Gold piece.
-    # Find a solution using Gold and 5 other pieces.
-    # When you find it, check for a solution using the remaining 6 pieces.
-    # If so, we win. if not, try another 5-piece-and-Gold combo.
-    #
-    # This approach, as apposed to trying every 12-choose-6 combo and then
-    # checking the other 6 pieces, prevents us from doing double work.  E.g.
-    # if we checked piece 1-6 and found no solution, we would stupidly try
-    # 7-12 later anyway.  (An alternate approach: when we find no solution to
-    # 1-6, mark 7-12 as toast as well, and always check the toast tables before
-    # starting a given combo.)
-
+    gold = PIECES[0] # see comments above for name explanation
     from itertools import combinations
-    ways_to_join_plus = combinations(PIECES[1:], 5)
-    for option in ways_to_join_plus:
-        option = list(option) + [PIECES[0]]
+    ways_to_join_gold = combinations(PIECES[1:], 5)
+    for option in ways_to_join_gold:
+        option = list(option) + [gold]
         debug_names = ', '.join(p.name for p in option)
         soln = solveRecursive(initialBoard, [], 6, option)
         if soln is not None:
@@ -221,16 +264,17 @@ def solve():
 
     #solveWithFixedPieces(box, PIECES[:6]) # random 6 pieces... good luck!
 
+
 def solveRecursive(board, moves, n, unused_pieces):
     """
     Given a |board| layout and a set of |moves| that have been made,
-    find a way to place |n| pieces from |unused_pieces| on the board.
+    find a way to place |n| Pieces from |unused_pieces| on the board.
     Returns None if there is no solution.
-    Returns an array of the subsequent moves needed to place |n|
-    pieces on the board.
+    Returns an array of the subsequent Moves needed to place |n|
+    Pieces on the board.
     """
     if n <= 0:
-        return []
+        return [] # base case: the board is solved; no further moves required.
     for i, piece in enumerate(unused_pieces):
         for move in piece.moves:
             if move.fits(board):
@@ -248,6 +292,8 @@ def solveRecursive(board, moves, n, unused_pieces):
 
 def solveWithFixedPieces(box, pieces):
     """Find a solution given a specific set of Pieces."""
+    # NB: After writing the recursive solution above, I stopped maintaining
+    # this function, so it may not work.
     options = [
             # The root option is a blank board.
             [ (Move(pieces[0], mask=0), []) ]
@@ -267,8 +313,10 @@ def solveWithFixedPieces(box, pieces):
     print stage
     print trail
 
+
 def main():
     solve()
+
 
 def test():
     b = Box()
