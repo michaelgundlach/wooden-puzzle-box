@@ -27,8 +27,8 @@ class Move(object):
         number = ''.join(binary(word) for word in shape.art)
         return int(number, 2)
 
-    def overlaps(self, move2):
-        return self.mask & move2.mask
+    def fits(self, move2):
+        return not (self.mask & move2.mask)
 
     def combined(self, move2):
         return Move(self.piece, mask=self.mask | move2.mask)
@@ -167,7 +167,34 @@ def solve():
             Piece("L", box, ['|  ', '|  ', '+--']),
             Piece("z", box, ['--+ ', '  +-']),
             ]
-    solveWithFixedPieces(box, pieces)
+    initialBoard = Move(pieces[0], mask=0)
+    print solveRecursive(initialBoard, [], 6, pieces)
+    #solveWithFixedPieces(box, pieces)
+
+def solveRecursive(board, moves, n, unused_pieces):
+    """
+    Given a |board| layout and a set of |moves| that have been made,
+    find a way to place |n| pieces from |unused_pieces| on the board.
+    Returns None if there is no solution.
+    Returns an array of the subsequent moves needed to place |n|
+    pieces on the board.
+    """
+    if n <= 0:
+        return []
+    for i, piece in enumerate(unused_pieces):
+        for move in piece.moves:
+            if move.fits(board):
+                soln = solveRecursive(
+                        board.combined(move),
+                        moves + [move],
+                        n-1,
+                        # Try the pieces we haven't already exhausted or used
+                        # ourselves -- no need to try a piece's moves twice.
+                        unused_pieces[i+1:])
+                if soln is not None:
+                    return [move] + soln
+    return None
+
 
 def solveWithFixedPieces(box, pieces):
     """Find a solution given a specific set of Pieces."""
@@ -180,8 +207,8 @@ def solveWithFixedPieces(box, pieces):
         thisPiecesOptions = []
         for move in piece.moves:
             for stage, trail in options[-1]:
-                # TODO: depth-first rather than breadth-first search!
-                if not move.overlaps(stage):
+                # this is breadth-first search
+                if move.fits(stage):
                     newOption = (move.combined(stage), trail + [move])
                     thisPiecesOptions.append(newOption)
         options.append(thisPiecesOptions)
