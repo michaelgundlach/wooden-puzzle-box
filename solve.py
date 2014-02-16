@@ -158,18 +158,20 @@ class AsciiShape(object):
 
 BOX = Box()
 PIECES = [
+        # The first 6 pieces and last 6 pieces each form a layer in
+        # a 6x5 box.
         Piece("plus", BOX, [' | ', '-|-', ' | ']),
+        Piece("L", BOX, ['|  ', '|  ', '+--']),
+        Piece("u", BOX, ['---', '| |']),
+        Piece("q", BOX, ['++', '++', ' |']),
+        Piece("f", BOX, [' | ', '-+-', '  |']),
+        Piece("z", BOX, ['--+ ', '  +-']),
         Piece("p", BOX, ['-+--', ' |  ']),
         Piece("t", BOX, ['-+-', ' | ', ' | ']),
         Piece("w", BOX, ['-+ ', ' ++', '  |']),
         Piece("2", BOX, ['+  ', '+-+', '  |']),
         Piece("r", BOX, ['+---', '|   ']),
-        Piece("u", BOX, ['---', '| |']),
         Piece("i", BOX, ['-----']),
-        Piece("q", BOX, ['++', '++', ' |']),
-        Piece("f", BOX, [' | ', '-+-', '  |']),
-        Piece("L", BOX, ['|  ', '|  ', '+--']),
-        Piece("z", BOX, ['--+ ', '  +-']),
         ]
 
 def solve():
@@ -178,9 +180,45 @@ def solve():
     random.shuffle(PIECES)
 
     initialBoard = Move(PIECES[0], mask=0)
-    soln = solveRecursive(initialBoard, [], 6, PIECES)
-    for move in (soln or []):
-        print str(move).strip()
+
+    # Alg:
+    # Call the 1st piece in PIECES the Gold piece.
+    # Find a solution using Gold and 5 other pieces.
+    # When you find it, check for a solution using the remaining 6 pieces.
+    # If so, we win. if not, try another 5-piece-and-Gold combo.
+    #
+    # This approach, as apposed to trying every 12-choose-6 combo and then
+    # checking the other 6 pieces, prevents us from doing double work.  E.g.
+    # if we checked piece 1-6 and found no solution, we would stupidly try
+    # 7-12 later anyway.  (An alternate approach: when we find no solution to
+    # 1-6, mark 7-12 as toast as well, and always check the toast tables before
+    # starting a given combo.)
+
+    from itertools import combinations
+    ways_to_join_plus = combinations(PIECES[1:], 5)
+    for option in ways_to_join_plus:
+        option = list(option) + [PIECES[0]]
+        debug_names = ', '.join(p.name for p in option)
+        soln = solveRecursive(initialBoard, [], 6, option)
+        if soln is not None:
+            print "Solved board 1: %s..." % debug_names,
+            soln2 = solveRecursive(initialBoard, [], 6,
+                    [p for p in PIECES if p not in option])
+            if soln2 is not None:
+                print "and solved board 2."
+                print
+                print "Board 1:"
+                print soln
+                print "Board 2:"
+                print soln2
+                print
+                print
+                print
+            else:
+                print "but no solution otherwise."
+        else:
+            print "No solution for: %s" % debug_names
+
     #solveWithFixedPieces(box, PIECES[:6]) # random 6 pieces... good luck!
 
 def solveRecursive(board, moves, n, unused_pieces):
