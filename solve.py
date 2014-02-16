@@ -165,18 +165,17 @@ def solve():
             Piece("q", box, ['++', '++', ' |']),
             Piece("r", box, [' | ', '-+-', '  |']),
             Piece("L", box, ['|  ', '|  ', '+--']),
-            Piece("z", box, ['--- ', '  |-']),
+            Piece("z", box, ['--+ ', '  +-']),
             ]
     solveWithFixedPieces(box, pieces)
 
 def solveWithFixedPieces(box, pieces):
     """Find a solution given a specific set of Pieces."""
-    # Options starts with every way the first piece can go in.
     options = [
-        [ (m, [m]) for m in pieces[0].moves ]
-    ]
-    print options[0][0][0]
-    for piece in pieces[1:]:
+            # The root option is a blank board.
+            [ (Move(pieces[0], mask=0), []) ]
+            ]
+    for piece in pieces:
         print "Adding piece %s" % piece.name
         thisPiecesOptions = []
         for move in piece.moves:
@@ -186,11 +185,10 @@ def solveWithFixedPieces(box, pieces):
                     newOption = (move.combined(stage), trail + [move])
                     thisPiecesOptions.append(newOption)
         options.append(thisPiecesOptions)
-        if len(options) == len(pieces):
-            print "%d winners!" % len(options[-1])
-            stage, trail = options[-1][0]
-            print stage
-            print trail
+    print "%d winners!" % len(options[-1])
+    stage, trail = options[-1][0]
+    print stage
+    print trail
 
 def main():
     solve()
