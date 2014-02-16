@@ -162,11 +162,17 @@ def solve():
     pieces = [
             Piece("plus", box, [' | ', '-|-', ' | ']),
             Piece("u", box, ['---', '| |']),
+            Piece("i", box, ['-----']),
             Piece("q", box, ['++', '++', ' |']),
             Piece("r", box, [' | ', '-+-', '  |']),
             Piece("L", box, ['|  ', '|  ', '+--']),
             Piece("z", box, ['--+ ', '  +-']),
             ]
+
+    # Don't let us cheat with an optimal ordering
+    import random
+    random.shuffle(pieces)
+
     initialBoard = Move(pieces[0], mask=0)
     print solveRecursive(initialBoard, [], 6, pieces)
     #solveWithFixedPieces(box, pieces)
